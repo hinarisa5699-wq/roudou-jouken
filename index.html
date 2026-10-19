@@ -386,7 +386,7 @@ var e,a,n="function"==typeof Symbol?Symbol:{},t=n.iterator||"@@iterator",r=n.toS
      トークンをそのまま埋め込むとこのリポジトリは公開のため誰でも読めてしまうので、
      アプリのパスワードで暗号化した文字列だけを埋め込む。
      起動時（パスワード入力が通った時点）に復号してこの端末に設定する。 */
-  var TOKEN_ENC = "";
+  var TOKEN_ENC = "eyJ2IjoxNzkyNDA0NjU3ODAyLCJzIjoiRURxZ1JNcmFZN0x2anJ0ZEFBcXlxUT09IiwiaSI6Ik0wOFJZMit6YiszTmJ3ckUiLCJjIjoiU1lHMzg5VGJacGF1am0rN0Y5Rmc3dEpRalU2azZyNGQ5TkErL0xsWHdJenhIL1Qxek5hTnphZDZFbnYzRlQxQmJiMUUrVnovWmdJN0FXRUUzRjZ1TzB2ZFg0VW42ZUpSYlRNUDdKSmU2RTQzckFwV1kyR3AzM0xSUlNnaGdXWmR5Qkl4TXJEMThBTG10dkdSOXc9PSJ9";
   function _b64e(buf){var b=new Uint8Array(buf),s="";for(var i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s);}
   async function _tkKey(pw,salt,usage){
     var km=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
