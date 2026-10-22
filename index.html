@@ -331,6 +331,7 @@ var e,a,n="function"==typeof Symbol?Symbol:{},t=n.iterator||"@@iterator",r=n.toS
         （経験値手当は賃金規定の半年後の欄・資格手当と役職手当は据え置き・時短は週労働時間×4で按分）。
      ③ 「★ 昇給・職員一括（昇給CSV取込）」を個人ページから ⚙設定 へ移す。
      ④ 賃金規定の「半年後の基本給」を 基本給×1.03＋(資格手当＋役職手当)×0.03 にそろえる（給与体制表 2026-10-22 修正版と同じ）。
+     ⑤ 「7 賃金支払時の控除」を加入している保険に合わせる（社保なしの人に「社会保険料」と書かない）。
      暗号ブロック側を直したら、このscriptタグは丸ごと削除してかまいません。 -->
 <script>
 (function () {
@@ -459,6 +460,10 @@ var e,a,n="function"==typeof Symbol?Symbol:{},t=n.iterator||"@@iterator",r=n.toS
     code = rep(code, "ReactDOM.createRoot(document.getElementById('root'))",
       "Object.values(WAGE_BY_DEPT).forEach(t => Object.values(t).forEach(w => { const r = w.role ? Number(w.role.amount) || 0 : 0; w.base.half = Math.round(w.base.hire * 1.03 + (Number(w.allowance) + r) * 0.03); }));\nReactDOM.createRoot(document.getElementById('root'))",
       'wage-half-3pct');
+    // ⑤ 「7 賃金支払時の控除」を加入している保険に合わせる（社保なしの人に「社会保険料」と出さない・雇用保険なしなら「雇用保険料」も出さない）
+    code = rep(code, '"7 賃金支払時の控除：有（雇用保険料・社会保険料・住民税", ',
+      '"7 賃金支払時の控除：有（" + [d.insurance && d.insurance.employment && "雇用保険料", d.insurance && (d.insurance.health || d.insurance.pension) && "社会保険料", "住民税"].filter(Boolean).join("・"), ',
+      'deduction-text');
     return code;
   }
 
