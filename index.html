@@ -1244,15 +1244,22 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       try {
         if (!window.html2canvas || !window.jspdf) throw new Error('PDFの部品が読み込めていません');
         findBtn(/^開いて修正$/, row).click();
+        // 入力画面が開くのを待ってから「プレビュー →」で印刷用の画面にする（入力画面の小さいプレビューは体裁が違うため）
+        var pvBtn = null;
+        for (var i = 0; i < 60 && !pvBtn; i++) { await sleep(100); pvBtn = findBtn(/^プレビュー\s*→$/); }
+        if (!pvBtn) throw new Error('通知書の画面が開けませんでした');
+        await sleep(200);
+        pvBtn.click();
         var pv = null;
-        for (var i = 0; i < 60; i++) {
+        for (var i2 = 0; i2 < 60; i2++) {
           await sleep(100);
+          if (!findBtn(/印刷\s*\/\s*PDFで保存/)) continue;
           var ps = document.querySelectorAll('.form-preview');
           for (var k = 0; k < ps.length; k++) if (txt(ps[k]).replace(/[\s　]+/g, '').indexOf(name + '殿') >= 0) pv = ps[k];
           if (pv) break;
         }
-        if (!pv) throw new Error('通知書の画面が開けませんでした');
-        await sleep(300);
+        if (!pv) throw new Error('印刷用の画面が開けませんでした');
+        await sleep(400);
         var fn = await makePdf(pv);
         console.log(TAG + ' saved ' + fn);
         toast('PDFを保存しました：' + fn);
@@ -1260,7 +1267,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         console.log(TAG + ' ' + (e && e.message || e));
         toast('PDFを作れませんでした：' + (e && e.message || e));
       } finally {
-        // 保管BOXに戻る（検索していた文字も戻す）
+        // 印刷用の画面なら入力画面に戻ってから、保管BOXに戻る（検索していた文字も戻す）
+        var back = findBtn(/入力に戻る/);
+        if (back) { back.click(); for (var b2 = 0; b2 < 30 && !findBtn(/労働条件\s*保管BOX/); b2++) await sleep(100); }
         var box = findBtn(/労働条件\s*保管BOX/);
         if (box) {
           box.click();
