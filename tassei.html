@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>達成手当シミュレーター（職員用）｜株式会社イケイケカンパニー</title>
+<style>
+:root{--pink:#f9d5e5;--pink2:#e88fb4;--mint:#d7f3ea;--mint2:#2f9e7e;--sky:#dcecfb;--sky2:#2b6cb0;--sun:#fff3c4;--ink:#1f2937;--sub:#6b7280;--line:#9ca3af;--bg:#fff9fb;--red:#c53030}
+*{box-sizing:border-box}
+html,body{margin:0;font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Segoe UI",Meiryo,sans-serif;color:var(--ink);background:var(--bg);font-size:15px;line-height:1.6}
+header{background:linear-gradient(90deg,var(--pink),var(--sky));padding:14px 16px;border-bottom:2px solid var(--pink2)}
+header h1{margin:0;font-size:18px}
+header .who{font-size:13px;color:var(--sub)}
+main{max-width:860px;margin:0 auto;padding:14px}
+.card{background:#fff;border:2px solid #e5e7eb;border-radius:14px;padding:14px;margin:0 0 14px}
+.card h2{font-size:16px;margin:0 0 10px;padding-left:8px;border-left:5px solid var(--pink2)}
+label{display:block;font-size:13px;color:var(--sub);margin:8px 0 3px}
+input,select{width:100%;padding:10px;border:2px solid var(--line);border-radius:10px;font-size:16px;background:#fff}
+input:focus,select:focus{outline:none;border-color:var(--sky2)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+button{padding:10px 16px;border:2px solid var(--sky2);border-radius:10px;background:var(--sky2);color:#fff;font-size:15px;cursor:pointer}
+button.sub{background:#fff;color:var(--sky2)}
+button.del{background:#fff;color:var(--red);border-color:var(--red);padding:5px 10px;font-size:13px}
+button.small{padding:5px 10px;font-size:13px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.tabs button{background:#fff;color:var(--ink);border-color:var(--line)}
+.tabs button.hide{display:none}
+.tabs button.on{background:var(--pink2);border-color:var(--pink2);color:#fff}
+.big{font-size:26px;font-weight:700;color:var(--mint2)}
+.box{background:var(--mint);border:2px solid var(--mint2);border-radius:12px;padding:10px 12px;margin:10px 0}
+.note{font-size:12px;color:var(--sub)}
+.warn{color:var(--red);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border:1px solid #d1d5db;padding:6px;text-align:right;white-space:nowrap}
+th{background:var(--sky);text-align:center}
+td.l{text-align:left}
+.tw{overflow-x:auto}
+.src-j{color:var(--mint2);font-weight:700}
+.src-y{color:#b7791f;font-weight:700}
+.plus{color:var(--mint2);font-weight:700}.minus{color:var(--red);font-weight:700}
+#login{max-width:420px;margin:8vh auto}
+.hide{display:none}
+.panel.hide{display:none}
+.calc-line{display:flex;justify-content:space-between;border-bottom:1px dashed #d1d5db;padding:4px 0}
+.printhead{display:none}
+@media (max-width:560px){.row,.row3{grid-template-columns:1fr}}
+@media print{
+  header,.tabs,.noprint,#login{display:none!important}
+  .panel.hide{display:block!important}
+  body{background:#fff;font-size:11px}
+  .card{border:1px solid #999;break-inside:avoid;padding:8px;margin:0 0 8px}
+  .printhead{display:block;margin:0 0 8px}
+  input,select{border:none;padding:0;font-size:11px}
+  main{max-width:none;padding:0}
+  .tw{overflow:visible}
+  table{font-size:9px}
+  th,td{padding:2px 3px;white-space:normal}
+  @page{size:A4;margin:10mm}
+  tr.empty{display:none}
+}
+</style>
+</head>
+<body>
+<div id="login" class="card">
+  <h2>達成手当シミュレーター（職員用）</h2>
+  <p class="note">自分の名前を選び、事務から受け取った個人パスコードを入れてください。自分の分だけが表示されます。</p>
+  <label>名前</label>
+  <select id="lgName"></select>
+  <label>個人パスコード</label>
+  <input id="lgPw" type="password" autocomplete="off">
+  <div style="margin-top:12px"><button id="lgGo">開く</button></div>
+  <div id="lgErr" class="warn"></div>
+</div>
+
+<div id="app" class="hide">
+<header>
+  <h1>達成手当シミュレーター（職員用）</h1>
+  <div class="who"><span id="whoName"></span>　<a href="#" id="logout">閉じる</a></div>
+</header>
+<main>
+  <div id="adminBar" class="card hide noprint" style="background:var(--sun);border-color:#d69e2e"><b>管理者画面</b>　表示する職員：<select id="adminPick" style="width:auto;display:inline-block"></select><div class="note">ほかの職員の画面をそのまま開けます。保存した予想は、この端末に職員ごとに残ります（職員本人のスマホに保存した予想は見えません）。</div></div>
+  <div class="printhead"><b>達成手当シミュレーター（職員用）</b>　<span id="phName"></span>　印刷日 <span id="phDate"></span></div>
+  <div class="tabs">
+    <button data-p="p1" class="on">① ○月分の予想</button>
+    <button data-p="p2">② 支給月ごとの予想・清算</button>
+    <button data-p="p3">③ 手取りへの効果</button>
+    <button data-p="p4">④ 保存した予想</button>
+    <button data-p="p0" id="tabAll" class="hide">全員一覧（管理者）</button>
+  </div>
+
+  <!-- ① -->
+  <section id="p1" class="panel">
+    <div class="card">
+      <h2>○月分の達成手当などを予想する</h2>
+      <div class="row3">
+        <div><label>年</label><select id="cYear"><option>2026</option><option>2027</option></select></div>
+        <div><label>計算月（○月分）</label><select id="cMonth"></select></div>
+        <div><label>部署（達成シート）</label><select id="cDept">
+          <option value="nurse">ナース（訪問看護）</option><option value="helper">ヘルパー（訪問介護）</option>
+          <option value="day">デイサービス</option><option value="cm">ケアマネ</option><option value="jimu">事務</option></select></div>
+      </div>
+      <p class="note">自分の達成シートと同じ数字を入れると、同じ計算で手当が出ます。件数は単独・同行・新人同行を合わせた件数です。</p>
+    </div>
+    <div class="card"><h2 id="dTitle"></h2><div id="deptBox"></div><div class="note" id="dRules"></div></div>
+    <div class="card">
+      <h2>そのほか</h2>
+      <div class="row">
+        <div><label>管理達成手当（管理者のみ・円）</label><input id="cKanri" type="number" inputmode="numeric"></div>
+        <div><label>メモ（任意）</label><input id="cMemo" type="text"></div>
+      </div>
+      <div class="box">
+        <div id="cKpi"></div>
+        <div id="cLines"></div>
+        <div style="margin-top:6px"><span id="cTitle"></span>の予想手当 合計（前払い・清算の対象）</div>
+        <div class="big" id="cTotal">¥0</div>
+        <div id="cRate" style="font-size:18px;font-weight:700"></div>
+        <div class="note" id="cBea"></div>
+        <div class="note" id="cPay"></div>
+        <div class="note" id="cJisseki"></div>
+      </div>
+      <div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="cSave">この予想を保存</button>
+        <button class="sub" id="cClear">入力をクリア</button>
+        <button class="sub" onclick="window.print()">印刷</button>
+      </div>
+      <div id="cMsg" class="note"></div>
+    </div>
+  </section>
+
+  <!-- ② -->
+  <section id="p2" class="panel hide">
+    <div class="card">
+      <h2>計算月ごとの手当（実績と予想）</h2>
+      <div class="row"><div><label>年</label><select id="sYear"><option>2026</option><option>2027</option></select></div></div>
+      <div class="tw" style="margin-top:8px"><table id="mTable"></table></div>
+      <p class="note"><span class="src-j">実績</span>＝会社の手当月別明細（2026年1〜7月分を収録）。<span class="src-y">予想</span>＝自分で保存した予想。実績がある月は実績を使います。</p>
+    </div>
+    <div class="card">
+      <h2>支給月ごとの入金予想（前払い＋清算）</h2>
+      <div class="tw"><table id="payTable"></table></div>
+      <p class="note">変動手当（達成・処遇改善・調整・管理達成・オンコール・CM件数）は年4回の前払いです。1月支給＝12・1月分（2ヶ月）、3月支給＝2〜5月分（4ヶ月）、7月支給＝6・7月分（2ヶ月）、9月支給＝8〜11月分（4ヶ月）。前払い額＝サイクル先頭の月の手当×月数。清算金＝カバーする各月の合計−前払い額で、次の支給月（3月・7月・9月・翌1月）に精算されます。</p>
+    </div>
+    <div class="card">
+      <h2>前払い・清算の内訳</h2>
+      <div class="tw"><table id="cycTable"></table></div>
+    </div>
+  </section>
+
+  <!-- ③ -->
+  <section id="p3" class="panel hide">
+    <div class="card">
+      <h2>自分の固定給（基本給など）</h2>
+      <div id="kInfo"></div>
+    </div>
+    <div class="card">
+      <h2>まとめ払いで手取りがいくら増えているか</h2>
+      <div class="row">
+        <div><label>固定給（基本給＋資格＋経験値＋役職手当・月）</label><input id="tFixed" type="number" inputmode="numeric"></div>
+        <div><label>変動手当（月平均）<span class="note">※空欄なら②の年間合計÷12</span></label><input id="tVar" type="number" inputmode="numeric"></div>
+        <div><label>扶養親族の数（税法上）</label><input id="tFuyo" type="number" inputmode="numeric" value="0"></div>
+        <div><label>&nbsp;</label><label style="color:var(--ink)"><input id="tAge" type="checkbox" style="width:auto"> 40歳以上64歳以下（介護保険料の対象）</label></div>
+      </div>
+      <div id="tOut"></div>
+      <p class="note">手取りは東京支部の料率（健保9.85%／介護1.62%／厚年18.3%＝労使折半、雇用保険0.5%＝本人負担）と年税額の按分による概算です。住民税・賞与は含みません。受け取る総支給は同じで、社会保険の等級を何で決めるかだけが違います。</p>
+    </div>
+  </section>
+
+  <section id="p0" class="panel hide">
+    <div class="card">
+      <h2>全員一覧（計算月ごとの手当）</h2>
+      <div class="row"><div><label>年</label><select id="allYear"><option>2026</option><option>2027</option></select></div></div>
+      <div class="tw" style="margin-top:8px"><table id="allTable"></table></div>
+      <p class="note">実績＝手当月別明細（2026年1〜7月分）。予想＝この端末で保存した予想。清算は、カバーする月がすべて入っているサイクルだけ計算します。「開く」でその職員の画面に切り替わります。</p>
+    </div>
+  </section>
+
+  <!-- ④ -->
+  <section id="p4" class="panel hide">
+    <div class="card">
+      <h2>保存した予想</h2>
+      <div class="tw"><table id="svTable"></table></div>
+      <p class="note">予想はこのスマホ（ブラウザ）に保存されます。別の端末では見えません。</p>
+    </div>
+  </section>
+</main>
+</div>
+
+<script id="staff" type="application/json">[{"n": "佐藤 直子", "salt": "AOAYBUgtkO7quXY5vYIlSQ==", "iv": "osFckiUhJe/39WcT", "ct": "YIZfORAR9SC925MM+CFwuK4pffAhJk03MXG+upwO+UwqLjAIwIA5/Bh3BlvocUJdrL0dIxmg5xTY5HaZ0QLM3A9nFucmofDLnChPxmePklTAfDUSAo+20YmjTcSScxoCPuCM3pWSvSqKBOlLqCqhxQNm25TWvT3iSz+bxeHmgh7bMoqk2U0MHz1niT6jiEvSLW0qJOUMjDK20Uob7MnauiJPAOZ3hkcGhTGGZ3WD2Hoc/wNcP/r7C3SMRPNn4aKhBqpRJBYIxbYPlxfH8veWRbJulZ8dzj2wXs35yhjegKXGLbVfQFStCk0euuzBQR7X8g/J40fxDTI2ZE8NxxM1B6pqlD0iDxzOCSCS7hkI/EDcNaF7y+U5TtedKEnagsq+laJSNPrjc+wucSL20NtJe2WfyTk9uyLcAYR0Q6xKV1Tpw18bpp1hseMIZI6S6pmRFTu8a6Keh2KFoniXhq19RtfbFQoTXOkrl9MZxv1NcVDIlAuj3NW18Iv+WkOc4IsSvU6dKBgOUXXZO4Z5v+M39uwrH+wuu7FhpjK+grT1odd1lllLsopiCMYWMHOcXOc="}, {"n": "前垣 祐輔", "salt": "HVOmcRJMfhShglbRUd4iLA==", "iv": "hL/elrRpjecLM4SU", "ct": "GvvxQDiU6BXqmqff6ImOo740K07KKpLKTxv7y2Fw2+AR+U3MHVszlXxD6nUHKK9gpWPJCv5IrM9yD6WqPtdlrHA7U+OXKCkYmrZ9Is1P/OgNR60y8XRONGIvztYqzj1PkXLgd/it3uWqeGo+y1tK3+KFqfI6iuDzSckiW18jeltNT29bT/AiRftdgnJYrOyVhOfPotOE0ym7aKfPnJ+riA+NbLYxuWr/km0/lfeFssqVWZDUXCbAEryGk9ybyHBAI9lhA3cHibHCVF8MUqGeBGOasrjAOwFFC7KbNCu7mTBT8N6gzL7UNSyEojaZEh9PC20gaAyui1G8Yweg4K8N1r4G9HOPY6rTi5YDsX5MKlACXBIi8gl1zp9+5ZL+46m5aHAw9TSG/88TWHKNvxDA3+mFlRZJtnqPp3kZFeurc2npRvf4naf74bkU9nqRFeBqSgFFbtuy2RpJ2gin9yo/oJGEW7B3P1PqQShUpYgD/yh4zOEOWkOhnZ9kQr4TmkWbOJLcNhJB3MtESJsQ6XpIL4+FQwzxcu+WGt/kMIBZNQxDtrZWs1CAckp6Xciw0PJFxPjT8ORPcLfNgdnCxYFeeTbO+2lq4jit1E3cMH4k+7WSE+Qdjb4gleMrKrS993C1+jyotsvd8niR0OvESbN13QaVioFkviA7hGRgEe58HsSIqgl8+avPIiqKtOb5S6BZXk6kMtBwEzxNEegVyBCQrQ0QY8Fo6j6o"}, {"n": "土屋 萌子", "salt": "2Gd1itjpIGGSwdHGvimcNA==", "iv": "JAE/38BAmOfU5BAl", "ct": "ON7zgR9oUnz+5JRqmSyZQppPO2NlhuIycNm3/Tk0jNsxeZ+TdZi/JHDfb4UXGjpAQAOR6dP7Tr7sUfk19LGKWO6mylOQAHZZ3EXi09E1vfp19ha74usLxz0eJ/D2O8c8L0+Lia3NDd9hd/bP8PqOAYVdgKtUTfgT7UjUBrTKjbkSL2VwVS2T/GZqe8vE5+KmgEik2sRGKJgaTsGs6FgjsqHBNzagJ6izI+Fl6710NNMIc5QTCnynTroAZ9/4jZkUjT9FFmdFNltT8AvosyLoVZskeCYbv9njPUCD9DUoTl5h/5NWaOl3PPqG0D5kYsqSCel3i2JP/PKTrsrncof0bbMBIENfMRs6uWGoFlQrulKZyhPfqQDWBaT970t/cAf4ma6DJfoWtfn8ORB4WF7OpbMWw5reSt64k2aoTFnct4T1EDB+iXgJoOggQ9okhLC2PnSjQJyohj4rtM6/+q/snE/100QLoZmromQVdyeNYHrtYSVmogGJHT0Nyid8qlXr3PinS6bZjduncknEU+1c0rf4Ub/ax6MhFWohtuLl4IoeBSH4O9V9g2zYsBLFDCp3"}, {"n": "岡本 清美", "salt": "c1HxuMzv9dH4MUxcEva6vQ==", "iv": "Ehc3vsrjVF9v4FxW", "ct": "9VfcMQKc2Cx/bYUJ2RtfT8IVEbgv9FxrImYQMAsqIxYaxNRBy5Mkb7Aa1tE/qG8G673aUiUDk/P4+iIjDrPrq3tcDhpl1y5vYiSMAvUju7FBx2VA5eteaV5xihf1fmT8sUwEG4Itk349ikKfIvfiY1NJcwz4iTl4DzH+XZ5FJ9PCMq8IgahD311rwb1z+ZTPFiWgRuFKfu5Iy/nIcK3tGl54qPKPziKYLrl17LiAgEqSAjzBbOYrOaILKL8Z7IGZHYNr3G7uYnDQq0KRhdS4H0f1qCh8xxPeS4qGjud0Hk3fVNdrD3T98uBeY8UObXzvlGnDLZ5pJbl+tYs6+7tafeF7JGoCDq83Vlu/4/uo1UksOLglL2tcq/wAimjvfhiW05CaMcLfKv+H9gQ="}, {"n": "川端 英芽", "salt": "btglgpb6PzYrki6Uicbp9Q==", "iv": "K3WV7fOCrQ6JBK36", "ct": "Y5JIkIL5OGs/cXhczHyZYdFrwfvfKdorwP3Ekc95RjcRUWceeJiZQ2pXmpcSrXJIZy0bcpwqHX8whOHQa1JWyUmWXllZ4zh53p2VJWUnZVzmjwf/kB16jHNk6fe3mmqxzQEQ7tMYcLgtOEJSRyNEcvEuOWKxxwTnSU6CEvnIg32DLEUzCGn+VCioev0Q03DRdQQ86wfP23R0GJp3JzQ4RE4QQeg8NmESbb2G01GbDt6K9KtseYIZAEYGthLHnXF8DdH5JN5uZ21BvWOhVI2rh9vtCUeKhYzV/PtE1h57EiJ/nHB2DQ5n2rCFYufNjSOfozPrh6fFbM8zwK+odmQTJydIxBjg4CSODNx6r14m4Tj/5PWn1va3JpRJD3JIgxpgTVhRJmTO1d2YLjZiVLezeYycM4abmQoCUJL8mqQwWUAEEdBUViUPnA=="}, {"n": "成井 愛", "salt": "fpSNh8/s+p+Z8miqJMp0ng==", "iv": "opRJtkh52wW9zbSz", "ct": "frIHE/EQqS6qz1E4xW8t0/f891FCNEg5uYVLBElgkVQzgTbpPeeQOoWFmXYyNXzfP7We9OT0uek1djtVyKHckfAKlIhlNQ5FPbewc+qDBOdcEdIgnXqI0gr4nXdajpXv1HciIbVuiU/iwYi0oQQr53n5haqCLHavpb064LXyx1+ixxWPxq53m08h509fYwwMy5ryMWkM1D/Z27Co7Cr6EZYmgOU5vG1eB4QMMiWUfx5BnwNUz1TYl1HUvzQOhNEDne620O7SgXkqT0p21HfOeYc5EkJBHRuT+KyEu/BrmLCuiMEZuNG3PmeyueKb4Fj4u4IK1P+0ZjlhdGn5Zvjao0va01dO8eonpe1f/Dlzr9ly4ivL0xsnCMyfcRJYvBGHt3nsWvlbyRzi0JfAlxbVOIBGCRaP7WQa"}, {"n": "新井 直子", "salt": "yBLJrsJoi0GL0PmFfFDmCw==", "iv": "7pwFqWnIspYWP7R3", "ct": "vREko+LF0QbYAUGZvYBscH47pa8VPghvgDKKSrs0RW26HUc8ptFR0PO0sNYffC2aT9Y+7HyxlUXuh/ZRGy5+Tn3CKGm6j0DOT8e76s3c2TYhwIHBAPLlNkkAfkPp7AsmPGyJUzFpxrqJMSgrYbIYRQa/ayAzLsAoU3/4hYauGE2/CaA9CRPf12oJz3cxyHsPduGfqHbczr3Umrp9wxXCx1IoIgt4b+8wn83Yo1erUQxQgqU3yKOLd32OqlqLiZADMosZqLMQMNflOv699p7ZAjxQlbEUEtMyro5XbsQ1lAiIZ5Jk4e9OB6JUCMKr6qzh5qPpZPkWYvWsVY4F+PWJPaKLvhhqyCM0XFTma5KYm/P150gxM8ypB9R0b3TeYLZUKwt7h6My35DZOGfl5ZHtDQ+XFY/lMdfgIJLU3Xo3Uwk8ZoSVqa3rQFxpFjH30dOHMSMsuCzNc3xHckJTlPVd/VzzuISTYCqTF0sZy6abSo0PWCk6ic5FN2ULvoQFGw7FMc1R5ysLsoCuvIlofsu5JeT9LFiQZS+mvktoKiKUQ1j6Tb8RBq2YiHLXSWr9QWcwNiPIYykWzmug7sDfxeEAWfib7k87qw=="}, {"n": "渡邊 由美子", "salt": "l9dro8VvvXrPrtzAy2izdw==", "iv": "s0eQrLu1mF8nTdTB", "ct": "XehJrpi8jBNcZcF4TTNFE2CUtVPjqDEHSXnhkuer3YVHyQVgIUiP8yWd5/LI67HONMNmQkEGMbfBKIg8HlQ8xf1kvt+sOzOqn6FOuepzVpfswiRjZVHY6WN/D/eA2VH7gLCe9caUMLf29c6qbNt6PkjQtmj5sU9JK4yVWkbHgEMnih6DdHmhtdOi4GUar4JS9FYINI01J2hwsnmtTOyCmoge8ctdZh10YsjEsuELfA5TcCS7QYsxbtZ7fmkqOrDV4O3r9ph79nNqKyFJ/nBq8DmEtVW6X58wc7Hrg8FS/MLix6MXRD6hA+4svd6DlpkTqGFhpEQyXr/cnoCppYy/reniy3md4elS4ANR2+3a6iipRoTTMPqzrUeqEQRxsCGns/KNblcN6y6GkoYg5a7VmuahBWFSiw4IqluWZhghmapkHh/iPClwbNIYjt5Wvtp/DGcgUSec+6GfaBOTvy6h2XAm8Ftk25vU77/s5gXzC8goPr55h7Bg79n0dKF8w2hNR+Q0My/o91IV0pbsiyrTOtkYp8VyrkYeUUxJSPtWwUGyQFNPdjrQE75PV+WRrs/M8lYv1pGt6rVxR6jVJl0lqg8WDAF2J4QNbMIt"}, {"n": "生川 ともみ", "salt": "1sfnoryR9XevE13EuQOzyw==", "iv": "QlR/DZI4g1oNWoIs", "ct": "czso1WWF4EWZU6wI0+q1Gx9bpFErb6o1a+whRhJGLjowWSfSa6SYZN9XcaYY3neHajBXyiN+qcStCr1XRlOuTu2p6cgaadqakD6VNmAHfZX795i/aMsVl6Ljmjg76dWyri2Zn7NOvEafBFBZPBMYVBAGQD+PCPh9ZwuS8UBG36n2GyWUQ+m+SbUybLjJ96lItQNV89wjy4cGW6DXFPPNth6y/JHwK82FUqkFB/IcZrZvk2dTtAafNlKsLtfeLfiTtNmMwl0ZRqElDrUdwZudnegDLp/X408ia7Bbpk6UCLigCqXcrLnoRg2lsiLW8TF+eZXOwzbqdagL9AQqVJkOEouj10zgxoG605PwfnTQqx7HpZhO90ET5c4zAEUfQQ6AqkOyxvrMgZ3OSybQu1CPAuXw90n0ok9nIiSN5df6FUw80cy8pPVNJ6PaMTE1NozporiVdqaf1SlAQfPIUKgJlLw/rfPOP1cyGhWRQN7jEs40Iw0CN8OCW6okXa66Smy3lmzFPsxWI7bWj58HJ6WoJWRqyjE3rwpjX5bAv68iEyvRCPB3ODwBxhyJZHyGyEAdClKKEZqOGcwHhL//SqD/be6syJseqzPUEYjJEY9fSDtsj9fz5CNlzIgPvuMkB3OG09Cv2Z+kFDOyfTXYzA=="}, {"n": "田宮 紗来", "salt": "mrQoyX131Pd448yld3pOGw==", "iv": "FLoMzn3S8NDLtqSY", "ct": "DxHKFzB/IUTjgQOa/Dy+SZ8qpeJAy3TuYhL4Kju0DCBUXI7h/X1ngEszNIVGdi2CCY3veqem/vRZdpgi0q/2GysSDCMeOyp/xdPAOwCu5+1nP7u4TH2xV9mTlLYUn+rq+l6sfxHfddT3voI501UsAdO5gfq+tHwgeVDfp3PKX89KIEGIyKe+04bnq8W4Y4xWpFLm/YVWnYrKoYGdHsqDgZG0FQFr/IXgyUiihEJrOzEWGcyfLqvGcwRwIGp4HI4JKUR14ZnijRja9tUbcV9Fdsyin5rf0RW7kwE7VkhK07MntPoFNOalAJ0uvvmzlFyrblG0x4ef0BDB8nWwP6RdphrTqrjYE1Xc8B7zRBebnGcWwxaaBIPvwTaB40VAxi3AR8TueDnJgHwjZdw3mdkwV4fd7TicCNQVyc/o5+JFU1HE7k99T9YAaXrKVBffYhsmDtz3YcK4vp2p5KQpLvHx9NyzyfkxKBy5CUW1M1sErhMuxljzVjDoVYfiDoBAkWLEd6/eBHPPJfpMAcypzYwZzRhDwryMW8k3ogDJfllKEtk2hIlE4ZIIgxoqoA=="}, {"n": "石田 邦子", "salt": "TXxAtSF1S4W4OJW5cWP53g==", "iv": "3hMaaUCSmt6qSko0", "ct": "qdg5kUaK00N6bDmoPJ4hkRG/eikngyPOZeuTc8nZ2vzdaqfefTBmM8LMRs0mS4/ClklUseEGveCQejumauWym0xTw0sDVBfsbLjR3t5UHfdtqLv51NO8IZU8Qt434iC+0CPjVqf98S7JExv3v8yyPnkNGOaQj3mTI5pvPNKsHMFmMLah+8N+cUmnGnaHiNvmhDYRZ7qMOko+2tmX7dRfQRpX+Xvi0zYn008rUm/aNn4qcK44ZBLWBlsEDK/WCTrFE/XxY7l7AObIcD6gBtdKEVpWQG4pYVbYdTixVlawmaUTNogeUoYUU/5VKT1YRnuSRB41qAltSt9kAzXv7GkfsFKcu21gL0LeDWAYKAcrbYMl70g5XQtSDM49Y/9QUMtKM+AohKdLqIhGYs4dwjnHkF+br1xQ0MMymLK/rYqnwVjWYaSDUkLZT5vQ0j5wOLDjMohW7K73XF9Ap38rMOfd3zHM3jm/+segZkLpPsQ3tkN85w+pYp+H5eClyvLDbp3UtVrmJgn5mdDt0e3+2eUzrMIpeY6QerLLb3oacV/X3uPIorb9WQHw9TF6PcjFWfd8M++mZdkNiv0IX0ZRcHyDAUajvry7AHDd6OrluRAYSew6+fhJ92NCKpYT+60YXu3rJ4mERQ7BnKXWEXhM04Kz95nyivZ9kDMBvzIqkRgvJcHqS8VMPU/zW6rzpN+cejZR/ULLjioz"}, {"n": "菊地 順子", "salt": "1b9ddDlOtaXdvAk3bTbpNw==", "iv": "NJQ50UBISpEFyG1W", "ct": "IzA4PWkVCSAv5B5sbmL9Ha0EyNyREgnIB2JagqAW9IxEWBFbNPTtJaGSR/j2I5khDBPuP7bdBTsvxVVsGdr+BsYU+3yHB+IAB9uB7DYiVSRqa/loznko6wekKaxxX8A/8Y2bZGSyQkRj2fckomcIkCjUr02fzVcClMB6Jno6ipYKSPswh2rgriASI+mMrXvDkU9lIXaprEBGLaFNv3j+Hx6Kd2j5B1y8rCn/jYT2IlE5xdzc/7P+6+he44Og0QcQhTqypsf7Q3/RGNUW1d9A0I2d/Ltfi5t3nXs8dvL7kntrEbw1nnv4aEgd4RwDdXx3bFQOAPsIHR/8bovNuuAFrzny0dx0MgnBtBs+h1SIECsD0K14Co35rNDDMtepIJ9wmi0UI6MrNK7loZrZ0E9lkxPrK4BgjMgo+pcAhECS2QCmBw=="}, {"n": "蛭田 千景", "salt": "u+gdHjVk5treTSQnV3o0fQ==", "iv": "FnHHwObH6mrnroOm", "ct": "wDfgL8wE0XXGycvCwBS+vv42BhwmRzdxzcXIOhzZASfcVzAOK5WFwVzIuConZQ9vJVSLRRGlr9GI90Z64NZmu05oUw3AJj+1k3yaCiRQMutCgrrWH7aDAG6iBY8HpgA76uKpbC2839vBRHChrGL/AQLPwUyfr9KnHSJEb5RF8+TILjyA/GBTZYo+ORgiYckYIH93QXFQvN+y+kfAkm3SBArDaxO4DL0/hPWHWy+k0jQ9qiJYTBZxA9qnZICJqBU6bizHnwBw483NH4paZg/k6d8MLdq2vWtt8PBWhAXFGT1JvB1Q3cjuk8ZJJTyxgNrzlH9X7sEJ0fBgQVSKcvY49ANSeXTHvWxJGbhGc5dFG4HGaLQjDsZqE1CsyzLU11kNJvRsWv22wTo3lSHOyh7VVEhp6+GpmIdY0Vb79sEM4imDjYUZtQgNEOD3L7df0IVw1GEKtGaay88icNv9c1QIRvMc74I2FO8KAQ+ziVOS48L0e+ncGFW0PDLHcZRbdSq/yQtJl/r7K7vPtW48xR5+S/8JcSFDJR6qNl5EzD/5S/3OFAqTXksp4Q/9v0e5d8TulOORk3IXqhdsowxpb5XOlgF2uLjkpA=="}, {"n": "西田 悠紀", "salt": "zqam/B1bfRoUYCzcIqLdcA==", "iv": "ZOfeBs8CM/rRIVm+", "ct": "HXxMyV1gfSttuQOsuZuhPdWU8hIhllebfyDqJNUz14es+OrqUCAJq7AwNFwAN1S7rBfyULzAeRqUaxIumQ2v+NgO/KIOmO4Frk78zAgJeMga4PAcmwc2eAMhkPpnxwZftE7G6PuFwBSQlX3QshRumQXCdfyn2PtNDPAeKVm/zzR1pD+9s/gj5WORcemXVase3krzwH1juq9OkXj4H6395dmID0ullyGmNFhiWw6EHa5nccXGZFM9odS18HmlxywyyrP0GghGC1HrDCaJlyEJgvd3ag9SehdE9enx7H8OxGhngQjX5MaLiXk7Sg1GKJC0yg4DTk44GUva12FAJDRt8Qo7fuoSdwADaP478fWYfFlmazK424TeaOgdWJGzph7psH87m5Nt6O9AJPm9HfcIFKxCvK+GyyTGIEIB2XNkzx5Uedo7i78UedC1uH+avdDPDoCoYz1z+2yDATQ/PhdvBZmqAhGwETUZpN4EdesvLsoTjHAuDGC0N7HmbOXbb4C7jFaWTECQdIqNlx4321eKmZoelASbzpOIz1pt1xWVeWJi73cytetvrEwkQ9BQlyT+PA=="}, {"n": "谷井 恭子", "salt": "ACMBq59LBv2vjbyhq8eOQw==", "iv": "GCQcmb3W2OHOa6tJ", "ct": "e9akdHz86Hlw42bCK6Mik5nCiaxbLf9ISsKfHlPfNtyxNOTYMKWO4byc1VBX1fzMWtE122jVb9yJeR5gJAn1hVWkcmyRmkhKw4tp2xQX8cP0u5MHWSGNRNsfBQYx+KVARwAC4MwvtWFJ5/pIHmTNtvH941uE7+OjNvntjiL8Y+rjHUoHYM0qxLezVbHbL6MYsSMWV5gRhlGkGvyqyMEWgi0BB8EBv4sRZaeuJxXp/mr63tEBQiNKDwt/7wq0IooSQwq0U/3GkiS8wbKXpYBCXEBQD1ffrRntR9EW1ZSZsGbRqDq+ebI3wRdC/IRFGoenvGIMXaJqnBn1xmF/XL5VsSV4eIRwS1Ol/vIqrHomQ3MbI5XXa/yufCuzz7vdj4UfEuHME9LVVwBzGkYrKfdfwS/GVyKW+uFpJ7w9oPA3BIdOc9Adsj+kQ1kbKFFaVx8ISv2xuMauXldcV4wB/qNTimkLAae80Z4Pqp1d1Yl5nyqi7xbirPxU/Ekj/DWe9W1XMqmFNj2aqVPye+xh6hZ0EZIaHTcbKVHYpw09qXPTpFmYRPVysLCtEbA739JcxLGSmxyTvezVme1jqyehqFvr5gUKnbN0Tspz0n7rroFiz94A+AiORMo6Yld3bTmQJU8Mvel61A=="}, {"n": "青木 美奈子", "salt": "SHasaKeJ4fEgk0y9rGkPJQ==", "iv": "8guwTKUFad7DSF9R", "ct": "lZ6a2XOawqng26jvWV6uv2urbCq0iOeM+aT+Et18MEEG2ZnUs3IJaZYTvFlddWICIkV2YFvQnC3ovpU4fmffFmZ/9Y6YH+p3/C0lceWZmH1Mle8Rv1dlFwwzT4/vVjgBmfR08jaxLJwqF0S24XlwWaq7IYypdoAeP6//+ZJ9QRv/Q2k0Grrc045IdYq6YdRtc+drPYnfRIUBo2QAL/7IKakPBJjlKMANUtM8qOApRKByHJlpu7x0fiItcVORzvhY9gzc2ZUcjaXK136p9k3KvV9mqRw/Fkk+kFachJ34gBVpNF2lssURjLnlqpTKF2brJnHqo6pH3v47kKy7AAQ="}, {"n": "福田 麻里奈", "salt": "+lWtP/KeuZWQZDa0LrgSSg==", "iv": "+93hWzBjtfVUs7a2", "ct": "CYw9PLCZbCZSrw2CZ4FUYZ+ISYAhSh0lWno9Gj3dI1jx1qNpj7dF2poGvUSFRul+2qdpn0UtFAFDCiZRcU6aW9jboi0sHLJMw7LlEqpN+c9mrL1em0BFTQ2hiYuvt65BPoLkslqbHjd/vQCtZC7Bg4YY0Rf3tBjS/PHXfJve+dhRr+hEqwl0Pe2q8o2PLEzHCDASLCQckwyAe7og6/2s+gH6Cx1Qvl8AE7GbYZV04A0H4CneYhb9nJoPQA+gFG4YYPY+/kzndMnuuHsm8PrOjhv32d5faylCMGfoxL3sAqAWBbH85PwDtjkaUpAqO97njuWZwFa65NqDe6xMczXV"}]</script>
+<script id="admin" type="application/json">{"salt": "KMglc4BIuF+AVMyc0aVIcw==", "iv": "ZSR/iPEiMiNfgfcg", "ct": "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"}</script>
+<script>
+(function(){
+const STAFF=JSON.parse(document.getElementById('staff').textContent);
+const ITER=200000;
+const $=id=>document.getElementById(id);
+const yen=n=>(n<0?'−':'')+'¥'+Math.abs(Math.round(n)).toLocaleString('ja-JP');
+const sgn=n=>(n>0?'+':n<0?'−':'+')+'¥'+Math.abs(Math.round(n)).toLocaleString('ja-JP');
+const num=id=>{const v=parseFloat($(id).value);return isNaN(v)?0:v};
+let ME=null, ST=null;
+
+// ---- login ----
+const ADMIN=JSON.parse(document.getElementById('admin').textContent);let ALL=null;
+$('lgName').innerHTML='<option value="">― 名前を選択 ―</option>'+STAFF.map((s,i)=>`<option value="${i}">${s.n}</option>`).join('')+'<option value="admin">管理者（全員を見る）</option>';
+try{const l=localStorage.getItem('tassei-last');if(l!==null&&STAFF[l])$('lgName').value=l;}catch(e){}
+function b64(s){const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
+async function unlock(s,pw){
+  const k0=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),{name:'PBKDF2'},false,['deriveKey']);
+  const k=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b64(s.salt),iterations:ITER,hash:'SHA-256'},k0,{name:'AES-GCM',length:256},false,['decrypt']);
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(s.iv)},k,b64(s.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+async function login(){
+  $('lgErr').textContent='';
+  const i=$('lgName').value, pw=$('lgPw').value.trim().toLowerCase();
+  if(i===''){$('lgErr').textContent='名前を選んでください。';return}
+  if(!pw){$('lgErr').textContent='パスコードを入れてください。';return}
+  if(i==='admin'){try{ALL=await unlock(ADMIN,pw)}catch(e){$('lgErr').textContent='パスコードが違います。';return}ME=ALL[0];}
+  else{try{ME=await unlock(STAFF[i],pw)}catch(e){$('lgErr').textContent='パスコードが違います。';return}}
+  try{localStorage.setItem('tassei-last',i)}catch(e){}
+  $('lgPw').value='';
+  loadState();
+  $('login').classList.add('hide');$('app').classList.remove('hide');
+  $('phDate').textContent=new Date().toLocaleDateString('ja-JP');
+  if(ALL){$('adminBar').classList.remove('hide');$('tabAll').classList.remove('hide');
+    $('adminPick').innerHTML=ALL.map((p,k)=>`<option value="${k}">${p.n}</option>`).join('');
+    $('adminPick').onchange=()=>switchPerson(+$('adminPick').value);$('allYear').onchange=renderAll;}
+  if(!ALL)$('p0').classList.add('noprint');
+  switchPerson(0,true);
+  if(ALL)document.querySelector('.tabs button[data-p=p0]').click();
+}
+function switchPerson(k,first){
+  if(ALL){ME=ALL[k];$('adminPick').value=String(k);}
+  loadState();
+  $('whoName').textContent=ALL?'管理者として表示中：'+ME.n+' さん':ME.n+' さん';$('phName').textContent=ME.n+' さん';
+  initForm();if(ALL)renderAll();
+}
+function renderAll(){
+  const y=+$('allYear').value,keep=[ME,ST];
+  let h='<tr><th>職員</th>'+Array.from({length:12},(_,i)=>`<th>${i+1}月分</th>`).join('')+'<th>年計</th>'+CYCLES.map(c=>`<th>${c.pay}月支給分の清算（${c.settle}）</th>`).join('')+'<th></th></tr>';
+  ALL.forEach((p,k)=>{ME=p;loadState();let s=0,cells='';
+    for(let m=1;m<=12;m++){const x=monthVal(y,m);s+=x.v;{const pr=ST.preds[y+'-'+String(m).padStart(2,'0')];cells+=`<td>${x.v?yen(x.v):'—'}${x.src==='予想'?'<br><span class="src-y">予想</span>':''}${pr&&pr.rate!=null?'<br><span class="note">達成率'+pct(pr.rate)+'</span>':''}</td>`}}
+    const cy=CYCLES.map(c=>{const r=cycle(y,c);return r.missing.length?'<td class="note">未確定</td>':`<td class="${r.diff>=0?'plus':'minus'}">${sgn(r.diff)}</td>`}).join('');
+    h+=`<tr><td class="l">${p.n}</td>${cells}<td><b>${yen(s)}</b></td>${cy}<td class="noprint"><button class="small sub" data-k="${k}">開く</button></td></tr>`});
+  ME=keep[0];ST=keep[1];
+  $('allTable').innerHTML=h;
+  $('allTable').querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{switchPerson(+b.dataset.k);document.querySelector('.tabs button[data-p=p1]').click()});
+}
+$('lgGo').onclick=login;$('lgPw').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+$('logout').onclick=e=>{e.preventDefault();ME=null;ST=null;location.reload()};
+
+// ---- state (端末に保存) ----
+const KEY=()=>'tassei-v1-'+ME.n;
+function loadState(){
+  try{ST=JSON.parse(localStorage.getItem(KEY())||'null')}catch(e){ST=null}
+  if(!ST)ST={dept:'',fixed:'',fuyo:0,age:false,preds:{}};
+}
+function saveState(){try{localStorage.setItem(KEY(),JSON.stringify(ST));return true}catch(e){return false}}
+
+// ---- tabs ----
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('hide',p.id!==b.dataset.p));
+  if(b.dataset.p==='p2')renderSchedule();
+  if(b.dataset.p==='p3')renderTedori();
+  if(b.dataset.p==='p4')renderSaved();
+  if(b.dataset.p==='p0'&&ALL)renderAll();
+});
+
+// ---- data helpers ----
+function actual(y,m){ // m:1-12
+  if(y===2026&&m<=7)return ME.m[m-1]||0; // 手当月別明細は2026年7月分まで収録
+  return null;
+}
+function pred(y,m){const p=ST.preds[y+'-'+String(m).padStart(2,'0')];return p?p.total:null}
+function monthVal(y,m){
+  const a=actual(y,m); if(a!==null)return {v:a,src:'実績'};
+  const p=pred(y,m); if(p!==null)return {v:p,src:'予想'};
+  return {v:0,src:''};
+}
+// 支給月：計算月の翌月
+const CYCLES=[
+  {pay:1,months:[[-1,12],[0,1]],settle:'3月'},
+  {pay:3,months:[[0,2],[0,3],[0,4],[0,5]],settle:'7月'},
+  {pay:7,months:[[0,6],[0,7]],settle:'9月'},
+  {pay:9,months:[[0,8],[0,9],[0,10],[0,11]],settle:'翌年1月'}
+];
+function cycle(y,c){
+  const ms=c.months.map(([dy,m])=>({y:y+dy,m,...monthVal(y+dy,m)}));
+  const base=ms[0].v, adv=base*ms.length, sum=ms.reduce((a,b)=>a+b.v,0);
+  const missing=ms.filter(x=>!x.src).map(x=>x.y+'年'+x.m+'月');
+  return {ms,base,adv,sum,diff:sum-adv,missing,baseMissing:!ms[0].src};
+}
+function payInMonth(y,payM){ // その支給月に入る変動手当（前払い＋前サイクルの清算）
+  const idx=CYCLES.findIndex(c=>c.pay===payM); if(idx<0)return null;
+  const cur=cycle(y,CYCLES[idx]);
+  const prev= idx===0? cycle(y-1,CYCLES[3]) : cycle(y,CYCLES[idx-1]);
+  return {adv:cur.adv,settle:prev.diff,total:cur.adv+prev.diff,cur,prev};
+}
+
+// ---- ① form（達成シート 2026年10月版の計算） ----
+const NURSE_SVC=[['基本療養費Ⅰ',9660,0],['基本療養費Ⅰ・理学',9660,0],['精神基本療養費Ⅰ・正看',9660,0],['訪看Ⅰ２',5238,1],['訪看Ⅰ２・夜',6550,1],['訪看Ⅰ２・深',7862,1],['訪看Ⅰ３',9152,1],['訪看Ⅰ３・複１２',13622,1],['訪看Ⅰ４',12543,1],['訪看Ⅰ５(×２)',6539,1],['予訪看Ⅰ２',5015,1],['予訪看Ⅰ３',8829,1],['予訪看Ⅰ５',3158,1],['予訪看Ⅰ５(×２)',6316,1],['個別機能訓練加算１名',3269,1],['個別機能訓練加算２名',6539,1],['個別機能訓練加算3名',9808,1],['個別機能訓練加算４名',13077,1],['エンゼルケア（死後の処置）',11000,0],['キャンセル料',3000,0]];
+const HELPER_SVC=[['身体０１・Ⅰ',2180,0.287],['身体１・Ⅰ',3258,0.287],['身体２・Ⅰ',5160,0.287],['身体３・Ⅰ',7562,0.287],['生活２・Ⅰ',2391,0.287],['生活３・Ⅰ',2936,0.287],['身０１生１・Ⅰ',3047,0.287],['身１生１・Ⅰ',4126,0.287],['身１生２・Ⅰ',4993,0.287],['身２生１・Ⅰ',6027,0.287],['訪問型独自サービス１１',3269,0.245],['訪問型独自サービス１２',3265,0.245],['家事（障害）',2148,0.125],['身体（障害）',4428,0.125]];
+const JIMU_ITEMS=['電話対応','ファイル整理','訪問職員への伝言','FAX送信','役員からの仕事','生保提供票','ヘルパー報告書のチェック','ラディックス対応','事務職員の仕事の分担','手紙の仕分けと配布','誕生日カードの作成','PC操作など訪問職員へのサポート','利用者へ予定変更など伝言','実績の修正','物品の購入','提供票の発送','指示書依頼書の発送','計画書・報告書発送','請求書作成','ヘルパー予定表印刷','FAXの印刷と配布','リスト作成と確認'];
+const DEPT_OF={'西田 悠紀':'nurse','石田 邦子':'nurse','佐藤 直子':'nurse','谷井 恭子':'nurse','土屋 萌子':'nurse','生川 ともみ':'nurse','新井 直子':'helper','蛭田 千景':'helper','前垣 祐輔':'helper','渡邊 由美子':'helper','菊地 順子':'day','川端 英芽':'cm','田宮 紗来':'jimu','青木 美奈子':'helper','福田 麻里奈':'nurse'};
+const HOURS_OF={'西田 悠紀':150,'石田 邦子':160,'佐藤 直子':128,'谷井 恭子':160,'土屋 萌子':140,'生川 ともみ':140,'新井 直子':144,'蛭田 千景':140,'前垣 祐輔':97,'渡邊 由美子':126,'菊地 順子':160};
+const n0=v=>{const x=parseFloat(v);return isNaN(x)?0:x};
+const R=Math.round,FL=Math.floor;
+const inp=(id,label,val,extra)=>`<div><label>${label}</label><input id="${id}" type="number" inputmode="decimal" ${val!==undefined&&val!==''?'value="'+val+'"':''} ${extra||''}></div>`;
+const svcTable=(list,pre,showRate)=>'<div class="tw"><table><tr><th>サービス</th><th>単価</th><th>件数</th><th>売上</th></tr>'+list.map((s,i)=>`<tr><td class="l">${s[0]}</td><td>${s[1].toLocaleString()}</td><td style="width:90px"><input id="${pre}${i}" type="number" inputmode="numeric" style="padding:6px;font-size:15px"></td><td id="${pre}${i}_y"></td></tr>`).join('')+'</table></div>';
+function buildDept(d){
+  const h=HOURS_OF[ME.n]||(ME.k&&ME.k.hours)||160;let html='',title='',rules='';
+  if(d==='nurse'){title='ナースステーション達成率計算シート';
+    html=`<div class="row3">${inp('fNorma','ノルマ（円/時間）',5000)}${inp('fHours','契約時間（h）',h)}${inp('fShin','新人同行件数（×3,000円）','')}${inp('fOnW','オンコール 平日（回）×3,500円','')}${inp('fOnH','オンコール 土日・祭日（回）×5,000円','')}</div>`+svcTable(NURSE_SVC,'sv',false)+customBox('nurse');
+    rules='達成手当＝（総売上＋新人同行加算）×10.2%（達成率30%以上のとき）。達成率＝総売上÷売上目標。オンコールは売上に入り、オンコール手当としても支給。処遇改善手当＝介護保険売上（訪看Ⅰ・予訪看・個別機能訓練加算）×3.6%×1/2。ベア手当＝総売上÷契約時間×0.4（毎月の給与で支給）。';}
+  if(d==='helper'){title='ヘルパーステーション達成率計算シート';
+    html=`<div class="row3">${inp('fNorma','ノルマ（円/時間）',4100)}${inp('fHours','契約時間（h）',h)}${inp('fShin','新人同行件数（×3,000円）','')}${inp('fJihi','自費・アロハクラブ・介護タクシーなど（円）','')}${inp('fDoko','同行援護の売上（円）','')}${inp('fOnW','オンコール 平日（回）×2,000円','')}${inp('fOnH','オンコール 土日祝（回）×3,000円','')}</div>
+    <label style="color:var(--ink)"><input id="fZentai" type="checkbox" checked style="width:auto"> ヘルパー全体の達成率が80%以上（ベア手当の条件）</label>`+svcTable(HELPER_SVC,'sv',true)+customBox('kaigo');
+    rules='処遇改善加算＝介護保険売上×28.7%（総合事業24.5%・障害12.5%・同行援護8.1%）。達成率＝（総売上＋処遇改善加算）÷売上目標。達成手当＝（総売上＋新人同行加算）×10.1%、処遇改善手当＝処遇改善加算×1/2、ベア手当＝（総売上＋新人同行加算）×0.012×0.25（全体達成率80%以上）。達成率30%未満はいずれも不支給。';}
+  if(d==='day'){title='デイサービス達成率計算シート';
+    html=`<div class="row3">${inp('fNorma','ノルマ（円/時間）',3500)}${inp('fHours','契約時間（h）',h)}${inp('fOnW','オンコール 平日（回）×2,000円','')}${inp('fOnH','オンコール 土日祝（回）×3,000円','')}</div>
+    <p class="note" style="margin:10px 0 0"><b>デイの売上</b>（達成シートの金額がわかる人は直接入れてください。わからない人は下の3つから概算できます）</p>
+    <div class="row3">${inp('fDayU','1日の平均単位数（個別機能訓練を除く）','')}${inp('fDayD','出勤した日数','')}${inp('fDayH','平均の頭割り人数（役員除く）','')}</div>
+    <div style="margin:8px 0"><button class="sub small" id="fDayCalc">単位数から計算して下に入れる</button></div>
+    <div class="row">${inp('fDayS','デイ売上（按分後・円）','')}${inp('fDayK','デイ処遇改善加算（按分後・円）','')}</div>
+    <label style="color:var(--ink)"><input id="fChoseiOn" type="checkbox" style="width:auto"> 入社1年以内の正社員（調整手当で保障あり）</label>
+    ${inp('fChoseiAmt','保障の登録額（円）',60000)}
+    <p class="note" style="margin:10px 0 0"><b>訪問の件数</b></p>${inp('fJihi','受診援助など自費の訪問売上（円）','')}`+svcTable(HELPER_SVC,'sv',true)+customBox('kaigo');
+    rules='デイ売上＝その日の単位数×10.72円÷出勤した介護職員数。処遇改善加算＝単位数×12.7%を金額にして同じく頭割り（訪問は売上×28.7%など）。達成率＝（総売上＋処遇改善加算）÷売上目標。達成手当＝総売上×10.1%（デイは30%未満でも支給）、処遇改善手当＝処遇改善加算×1/2、調整手当＝登録額−（達成＋処遇）（入社1年以内の正社員）。オンコールは別に支給。';}
+  if(d==='cm'){title='ケアマネ達成率シート';
+    html=`<div class="row3">${inp('fSien','要支援等（人）','')}${inp('fK12','要介護1・2（人）','')}${inp('fK35','要介護3〜5（人）','')}${inp('fOnW','オンコール 平日（回）×2,000円','')}${inp('fOnH','オンコール 土日祝（回）×3,000円','')}</div>`;
+    rules='達成件数＝要介護1・2＋要介護3〜5＋要支援×0.5。介護売上＝（要支援472＋要介護1・2 1,086＋要介護3〜5 1,411単位）×10.9円。処遇改善手当＝介護売上×2.1%×1/2。CM件数手当（正社員）：35件〜80,000円／30件〜65,000円／25件〜50,000円／20件〜35,000円／15件〜20,000円。';}
+  if(d==='jimu'){title='事務達成率計算シート';
+    html='<div class="tw"><table><tr><th>仕事内容</th><th>評価</th></tr>'+JIMU_ITEMS.map((t,i)=>`<tr><td class="l">${t}</td><td style="width:120px"><select id="jm${i}" style="padding:6px"><option value="">―</option><option>〇</option><option>△</option><option>✕</option></select></td></tr>`).join('')+'</table></div>';
+    rules='〇＝10点（80%以上満足いく仕事ができた）、△＝5点（50%以上）、✕＝1点（20%以上）。合計180点以上で達成手当20,000円、150点以上で16,000円。処遇改善2,000円・ベア手当2,000円（毎月）。';}
+  $('dTitle').textContent=title;$('deptBox').innerHTML=html;$('dRules').textContent=rules;
+  $('deptBox').querySelectorAll('input,select').forEach(e=>e.addEventListener('input',recalc));
+  $('deptBox').querySelectorAll('select').forEach(e=>e.addEventListener('change',recalc));
+  if($('cxAdd'))$('cxAdd').onclick=()=>{addCustom();};
+  if($('fDayCalc'))$('fDayCalc').onclick=()=>{const u=n0($('fDayU').value),dd=n0($('fDayD').value),hh=n0($('fDayH').value)||1;
+    $('fDayS').value=FL(u*10.72/hh)*dd;$('fDayK').value=FL(FL(R(u*0.127)*10.72)/hh)*dd;recalc()};
+}
+const v=id=>$(id)?n0($(id).value):0;
+const RATES=[['0.287','介護保険（28.7%）'],['0.245','総合事業（24.5%）'],['0.125','障害（12.5%）'],['0.081','同行援護（8.1%）'],['0','加算なし（自費など）']];
+function customBox(kind){return `<div style="margin-top:10px"><b>一覧にないサービス</b><div id="cxList" data-kind="${kind}"></div><button class="sub small" id="cxAdd" type="button">＋ サービスを追加</button></div>`}
+function addCustom(o){
+  const box=$('cxList');if(!box)return;const kind=box.dataset.kind;const i=box.children.length+'_'+Math.random().toString(36).slice(2,6);
+  const sel=kind==='nurse'?`<label style="color:var(--ink);font-size:13px"><input type="checkbox" class="cxR" style="width:auto" ${o&&o.r?'checked':''}> 介護保険</label>`
+    :`<select class="cxR" style="padding:6px">${RATES.map(r=>`<option value="${r[0]}" ${o&&String(o.r)===r[0]?'selected':''}>${r[1]}</option>`).join('')}</select>`;
+  const d=document.createElement('div');d.className='cxRow';d.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr 1.4fr auto;gap:6px;align-items:end;margin:6px 0';
+  d.innerHTML=`<div><label>サービス名</label><input class="cxN" type="text" value="${o?String(o.n).replace(/"/g,'&quot;'):''}"></div><div><label>単価</label><input class="cxP" type="number" inputmode="numeric" value="${o?o.p:''}"></div><div><label>件数</label><input class="cxC" type="number" inputmode="numeric" value="${o?o.c:''}"></div><div>${sel}</div><div><button class="del noprint" type="button">削除</button></div>`;
+  d.querySelector('.del').onclick=()=>{d.remove();recalc()};
+  d.querySelectorAll('input,select').forEach(e=>{e.addEventListener('input',recalc);e.addEventListener('change',recalc)});
+  box.appendChild(d);
+}
+function customRows(){return [...document.querySelectorAll('.cxRow')].map(d=>{const r=d.querySelector('.cxR');return {n:d.querySelector('.cxN').value,p:n0(d.querySelector('.cxP').value),c:n0(d.querySelector('.cxC').value),r:r.type==='checkbox'?(r.checked?1:0):r.value}})}
+function calcDept(){
+  const d=$('cDept').value;let K=[],it=[],bea=0,RT=null;
+  const target=R(v('fNorma')*v('fHours'));
+  if(d==='nurse'){
+    let sales=0,kaigo=0;NURSE_SVC.forEach((s,i)=>{const y=R(s[1]*v('sv'+i));$('sv'+i+'_y').textContent=y?y.toLocaleString():'';$('sv'+i).closest('tr').classList.toggle('empty',!y);sales+=y;if(s[2])kaigo+=y});
+    customRows().forEach(c=>{const y=R(c.p*c.c);sales+=y;if(c.r)kaigo+=y});
+    const on=R(v('fOnW')*3500+v('fOnH')*5000);sales+=on;
+    const rate=target?sales/target:0, base=sales+v('fShin')*3000;RT=rate;
+    const ta=rate>=0.3?R(base*0.102):0, sh=R(kaigo*0.036*0.5);bea=v('fHours')?R(sales/v('fHours')*0.4):0;
+    K=[['売上目標',yen(target)],['総売上（オンコール含む）',yen(sales)],['達成率',pct(rate)],['介護保険売上',yen(kaigo)]];
+    it=[['達成手当',ta],['処遇改善手当',sh],['オンコール手当',on]];
+  }
+  if(d==='helper'||d==='day'){
+    let sales=0,kasan=0;HELPER_SVC.forEach((s,i)=>{const y=R(s[1]*v('sv'+i));$('sv'+i+'_y').textContent=y?y.toLocaleString():'';$('sv'+i).closest('tr').classList.toggle('empty',!y);sales+=y;kasan+=R(y*s[2])});
+    customRows().forEach(c=>{const y=R(c.p*c.c);sales+=y;kasan+=R(y*n0(c.r))});
+    sales+=v('fJihi');
+    if(d==='helper'){sales+=v('fDoko');kasan+=R(v('fDoko')*0.081);
+      const rate=target?(sales+kasan)/target:0, base=sales+v('fShin')*3000, ok=rate>=0.3;RT=rate;
+      const ta=ok?R(base*0.101):0, sh=ok?R(kasan*0.5):0;bea=(ok&&$('fZentai').checked)?R(base*0.012*0.25):0;
+      const on=R(v('fOnW')*2000+v('fOnH')*3000);
+      K=[['売上目標',yen(target)],['総売上',yen(sales)],['処遇改善加算',yen(kasan)],['達成率',pct(rate)+(ok?'':'（30%未満のため不支給）')]];
+      it=[['達成手当',ta],['処遇改善手当',sh],['オンコール手当',on]];
+    }else{
+      sales+=v('fDayS');kasan+=v('fDayK');
+      const rate=target?(sales+kasan)/target:0;RT=rate;const ta=R(sales*0.101),sh=R(kasan*0.5);
+      const ch=$('fChoseiOn').checked?Math.max(0,v('fChoseiAmt')-(ta+sh)):0;const on=R(v('fOnW')*2000+v('fOnH')*3000);
+      K=[['売上目標',yen(target)],['総売上（デイ＋訪問）',yen(sales)],['処遇改善加算',yen(kasan)],['達成率',pct(rate)]];
+      it=[['達成手当',ta],['処遇改善手当',sh],['調整手当',ch],['オンコール手当',on]];
+    }
+  }
+  if(d==='cm'){
+    const cnt=v('fK12')+v('fK35')+v('fSien')*0.5, uri=R((v('fSien')*472+v('fK12')*1086+v('fK35')*1411)*10.9);
+    const cmA=cnt>=35?80000:cnt>=30?65000:cnt>=25?50000:cnt>=20?35000:cnt>=15?20000:0;
+    const on=R(v('fOnW')*2000+v('fOnH')*3000);
+    K=[['達成件数',cnt+'件'],['介護売上',yen(uri)]];
+    it=[['CM件数手当',cmA],['処遇改善手当',R(uri*0.021*0.5)],['オンコール手当',on]];
+  }
+  if(d==='jimu'){
+    let pt=0,n=0;JIMU_ITEMS.forEach((t,i)=>{const x=$('jm'+i).value;if(x)n++;pt+=x==='〇'?10:x==='△'?5:x==='✕'?1:0});
+    K=[['合計点',pt+'点（'+n+'項目入力）']];
+    it=[['達成手当',pt>=180?20000:pt>=150?16000:0],['処遇改善手当',2000]];bea=2000;
+  }
+  it.push(['管理達成手当',v('cKanri')]);
+  return {K,it,bea,rate:RT};
+}
+const pct=r=>Math.round(r*1000)/10+'%';
+function initForm(){
+  $('cMonth').innerHTML=Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}月分</option>`).join('');
+  let last=0;ME.m.forEach((v,i)=>{if(v>0)last=i+1});
+  $('cMonth').value=String(Math.min(12,last+1));
+  $('cDept').value=ST.dept||DEPT_OF[ME.n]||'nurse';
+  const K=ME.k;
+  $('tFixed').value=K?K.fixed:(ST.fixed||'');$('tFuyo').value=K?K.dep:(ST.fuyo||0);$('tAge').checked=K?K.age40:!!ST.age;
+  $('kInfo').innerHTML=K?`<div class="tw"><table><tr><th>基本給</th><th>役職手当</th><th>管理者手当</th><th>資格手当</th><th>経験値手当</th><th>固定給 合計</th><th>契約時間</th><th>今の健保等級</th></tr>
+   <tr><td>${yen(K.base)}</td><td>${yen(K.pos)}</td><td>${yen(K.mgr)}</td><td>${yen(K.qual)}</td><td>${yen(K.exp)}</td><td><b>${yen(K.fixed)}</b></td><td>${K.hours}h</td><td>${K.grade}等級</td></tr></table></div>
+   <p class="note">給与計算アプリの登録内容（${K.from.replace('-','年')}月〜適用）。通勤手当は含みません。</p>`:'<p class="note">固定給の登録がありません。給与明細を見て入れてください。</p>';
+  loadMonth();
+  renderSchedule();renderTedori();renderSaved();
+}
+function collect(){const o={};document.querySelectorAll('#deptBox input,#deptBox select,#cKanri,#cMemo').forEach(e=>{if(e.id)o[e.id]=e.type==='checkbox'?e.checked:e.value});o._custom=customRows();return o}
+function apply(o){Object.entries(o||{}).forEach(([k,val])=>{const e=$(k);if(!e)return;if(e.type==='checkbox')e.checked=!!val;else e.value=val})}
+function loadMonth(){
+  const y=+$('cYear').value,m=+$('cMonth').value;
+  const p=ST.preds[y+'-'+String(m).padStart(2,'0')];
+  if(p&&p.dept)$('cDept').value=p.dept;
+  buildDept($('cDept').value);$('cKanri').value='';$('cMemo').value='';
+  if(p&&p.inp){apply(p.inp);(p.inp._custom||[]).forEach(c=>addCustom(c));}
+  $('cMsg').textContent=p?('保存済みの予想を表示しています（'+p.savedAt+'）'):'';
+  recalc();
+}
+function recalc(){
+  const r=calcDept(),y=+$('cYear').value,m=+$('cMonth').value;
+  const tot=r.it.reduce((s,x)=>s+x[1],0);
+  $('cKpi').innerHTML=r.K.map(x=>`<div class="calc-line"><span>${x[0]}</span><span>${x[1]}</span></div>`).join('');
+  $('cLines').innerHTML=r.it.filter(x=>x[1]).map(x=>`<div class="calc-line"><span><b>${x[0]}</b></span><span><b>${yen(x[1])}</b></span></div>`).join('');
+  $('cTitle').textContent=y+'年'+m+'月分';$('cTotal').textContent=yen(tot);
+  $('cRate').innerHTML=r.rate!==null&&r.rate!==undefined?('達成率 <span style="color:'+(r.rate>=1?'var(--mint2)':r.rate>=0.3?'#b7791f':'var(--red)')+'">'+pct(r.rate)+'</span>'):'';
+  $('cBea').textContent=r.bea?('ほかに ベア手当 '+yen(r.bea)+'（毎月の給与で支給・前払いとは別）'):'';
+  const c=CYCLES.find(c=>c.months.some(([dy,mm])=>mm===m));
+  $('cPay').textContent=m+'月分は'+(c.pay===1&&m===12?(y+1)+'年':y+'年')+c.pay+'月支給の前払いサイクルに入り、差額は'+c.settle+'支給で清算されます。';
+  const ac=actual(y,m);
+  $('cJisseki').innerHTML=ac!==null?('この月の実績（明細）：<b>'+yen(ac)+'</b>　予想との差 '+sgn(tot-ac)):'';
+  return {items:r.it,tot,bea:r.bea,rate:r.rate};
+}
+['cKanri','cMemo'].forEach(f=>$(f).addEventListener('input',recalc));
+$('cYear').addEventListener('change',loadMonth);$('cMonth').addEventListener('change',loadMonth);
+$('cDept').addEventListener('change',()=>{ST.dept=$('cDept').value;saveState();buildDept($('cDept').value);recalc()});
+$('cClear').onclick=()=>{buildDept($('cDept').value);$('cKanri').value='';$('cMemo').value='';recalc()};
+$('cSave').onclick=()=>{
+  const r=recalc(),y=+$('cYear').value,m=+$('cMonth').value,now=new Date();
+  ST.preds[y+'-'+String(m).padStart(2,'0')]={total:r.tot,rate:r.rate,items:r.items.filter(x=>x[1]),bea:r.bea,dept:$('cDept').value,inp:collect(),
+    savedAt:now.toLocaleDateString('ja-JP')+' '+now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})};
+  $('cMsg').textContent=saveState()?(y+'年'+m+'月分の予想を保存しました。'):'保存できませんでした（ブラウザの設定を確認してください）。';
+  renderSchedule();renderTedori();renderSaved();
+};
+
+// ---- ② schedule ----
+$('sYear').addEventListener('change',renderSchedule);
+function renderSchedule(){
+  const y=+$('sYear').value;
+  let h='<tr><th>計算月</th>'+Array.from({length:12},(_,i)=>`<th>${i+1}月分</th>`).join('')+'<th>年計</th></tr><tr><td class="l">手当合計</td>';
+  let s=0;
+  for(let m=1;m<=12;m++){const v=monthVal(y,m);s+=v.v;h+=`<td>${v.v?yen(v.v):'—'}<br><span class="${v.src==='実績'?'src-j':'src-y'}">${v.src}</span></td>`}
+  h+=`<td><b>${yen(s)}</b></td></tr>`;
+  h+='<tr><td class="l">達成率（予想）</td>'+Array.from({length:12},(_,i)=>{const p=ST.preds[y+'-'+String(i+1).padStart(2,'0')];return `<td>${p&&p.rate!=null?pct(p.rate):''}</td>`}).join('')+'<td></td></tr>';
+  // 内訳（実績）
+  if(y===2026&&ME.r)ME.r.forEach(([k,arr])=>{h+=`<tr><td class="l note">${k}（実績）</td>`+arr.map(v=>`<td class="note">${v?yen(v):''}</td>`).join('')+`<td class="note">${yen(arr.reduce((a,b)=>a+b,0))}</td></tr>`});
+  $('mTable').innerHTML=h;
+  let p='<tr><th>支給月</th><th>前払い</th><th>前回分の清算</th><th>入金予想（変動手当）</th></tr>';
+  [1,3,7,9].forEach(pm=>{const r=payInMonth(y,pm);
+    const advTxt=r.cur.baseMissing?'<span class="note">未入力</span>':yen(r.adv);
+    const stTxt=r.prev.missing.length?'<span class="note">未確定（'+r.prev.missing.join('・')+'分が未入力）</span>':`<span class="${r.settle>=0?'plus':'minus'}">${sgn(r.settle)}</span>`;
+    const tot=(r.cur.baseMissing?0:r.adv)+(r.prev.missing.length?0:r.settle);
+    const totTxt=(r.cur.baseMissing&&r.prev.missing.length)?'<span class="note">—</span>':'<b>'+yen(tot)+'</b>'+((r.cur.baseMissing||r.prev.missing.length)?'<br><span class="note">（わかる分のみ）</span>':'');
+    p+=`<tr><td class="l">${y}年${pm}月20日</td><td>${advTxt}</td><td>${stTxt}</td><td>${totTxt}</td></tr>`});
+  $('payTable').innerHTML=p+'<tr><td class="l note" colspan="4">2・4・5・6・8・10・11・12月の支給は固定給のみ（変動手当なし）です。</td></tr>';
+  let c='<tr><th>前払いサイクル</th><th>基準月の手当</th><th>前払い額</th><th>各月の合計</th><th>清算金</th><th>清算月</th></tr>';
+  CYCLES.forEach(cy=>{const r=cycle(y,cy);
+    const lab=r.ms.map(x=>(x.y!==y?'前年':'')+x.m+'月').join('・');
+    const df=r.missing.length?'<span class="note">未確定（'+r.missing.join('・')+'分が未入力）</span>':`<span class="${r.diff>=0?'plus':'minus'}">${sgn(r.diff)}</span>`;
+    c+=`<tr><td class="l">${cy.pay}月支給（${lab}分）</td><td>${r.baseMissing?'未入力':yen(r.base)+'×'+r.ms.length}</td><td>${r.baseMissing?'—':yen(r.adv)}</td><td>${yen(r.sum)}</td><td>${df}</td><td>${cy.settle}</td></tr>`});
+  $('cycTable').innerHTML=c;
+}
+
+// ---- ③ 手取り ----
+const GR=[[63000,58000],[73000,68000],[83000,78000],[93000,88000],[101000,98000],[107000,104000],[114000,110000],[122000,118000],[130000,126000],[138000,134000],[146000,142000],[155000,150000],[165000,160000],[175000,170000],[185000,180000],[195000,190000],[210000,200000],[230000,220000],[250000,240000],[270000,260000],[290000,280000],[310000,300000],[330000,320000],[350000,340000],[370000,360000],[395000,380000],[425000,410000],[455000,440000],[485000,470000],[515000,500000],[545000,530000],[575000,560000],[605000,590000],[635000,620000],[665000,650000],[695000,680000],[730000,710000],[770000,750000],[810000,790000],[855000,830000],[905000,880000],[955000,930000],[1005000,980000],[1055000,1030000],[1115000,1090000],[1175000,1150000],[1235000,1210000],[1295000,1270000],[1355000,1330000],[Infinity,1390000]];
+function grade(w){for(let i=0;i<GR.length;i++)if(w<GR[i][0])return {g:i+1,std:GR[i][1]};}
+const half=x=>{const f=Math.floor(x);return x-f<=0.5?f:f+1};
+function kyuyoKojo(y){if(y<=1900000)return Math.min(y,650000);if(y<=3600000)return y*0.3+80000;if(y<=6600000)return y*0.2+440000;if(y<=8500000)return y*0.1+1100000;return 1950000}
+function kiso(g){if(g<=1320000)return 950000;if(g<=3360000)return 880000;if(g<=4890000)return 680000;if(g<=6550000)return 630000;if(g<=23500000)return 580000;return 0}
+function taxRate(t){if(t<=1950000)return t*0.05;if(t<=3300000)return t*0.1-97500;if(t<=6950000)return t*0.2-427500;if(t<=9000000)return t*0.23-636000;if(t<=18000000)return t*0.33-1536000;return t*0.4-2796000}
+function tedori(gross,gradeBase,age,fuyo){
+  const gr=grade(gradeBase),pstd=Math.min(650000,Math.max(88000,gr.std));
+  const ken=half(gr.std*((0.0985+(age?0.0162:0))/2)),nen=half(pstd*0.183/2),koyo=half(gross*0.005);
+  const sha=ken+nen+koyo;
+  const ann=gross*12,kyu=Math.max(0,ann-kyuyoKojo(ann));
+  const taxable=Math.max(0,Math.floor((kyu-sha*12-kiso(kyu)-380000*fuyo)/1000)*1000);
+  const tax=Math.round(Math.max(0,taxRate(taxable))*1.021/12);
+  return {g:gr.g,std:gr.std,sha,tax,net:gross-sha-tax};
+}
+['tFixed','tVar','tFuyo','tAge'].forEach(f=>$(f).addEventListener('input',renderTedori));
+function renderTedori(){
+  if(!ME.k){ST.fixed=$('tFixed').value;ST.fuyo=num('tFuyo');ST.age=$('tAge').checked;saveState();}
+  const fixed=num('tFixed');
+  let v=num('tVar');let auto='';
+  if(!$('tVar').value){const y=2026;let s=0;for(let m=1;m<=12;m++)s+=monthVal(y,m).v;v=Math.round(s/12);auto='（②の2026年 年間合計÷12で自動）'}
+  if(!fixed){$('tOut').innerHTML='<p class="warn">固定給を入れてください（給与明細の基本給＋資格手当＋経験値手当＋役職手当）。</p>';return}
+  const gross=fixed+v,age=$('tAge').checked,fu=num('tFuyo');
+  const A=tedori(gross,gross,age,fu),B=tedori(gross,fixed,age,fu),C=B.net-A.net;
+  $('tOut').innerHTML=`${ME.k?`<p class="note">今の等級は${ME.k.grade}等級（給与計算アプリの登録）</p>`:''}<p class="note">固定給 ${yen(fixed)}＋変動手当 ${yen(v)}${auto}＝月の総支給 ${yen(gross)}</p>
+  <div class="tw"><table><tr><th></th><th>A：変動手当も入れて等級を決めた場合</th><th>B：固定給だけで等級を決めた場合（今のやり方）</th></tr>
+  <tr><td class="l">健保の等級</td><td>${A.g}等級（標準報酬 ${yen(A.std)}）</td><td>${B.g}等級（標準報酬 ${yen(B.std)}）</td></tr>
+  <tr><td class="l">社保＋雇用保険</td><td>${yen(A.sha)}</td><td>${yen(B.sha)}</td></tr>
+  <tr><td class="l">所得税</td><td>${yen(A.tax)}</td><td>${yen(B.tax)}</td></tr>
+  <tr><td class="l"><b>手取り（月）</b></td><td><b>${yen(A.net)}</b></td><td><b>${yen(B.net)}</b></td></tr></table></div>
+  <div class="box">C：まとめ払い（前払いで4〜6月を固定給のみ）にした効果<div class="big">月あたり ${sgn(C)}</div><div>年あたり <b>${sgn(C*12)}</b></div></div>`;
+}
+
+// ---- ④ saved ----
+function renderSaved(){
+  const ks=Object.keys(ST.preds).sort();
+  if(!ks.length){$('svTable').innerHTML='<tr><td class="l">まだ保存した予想はありません。①で入力して「この予想を保存」を押してください。</td></tr>';return}
+  let h='<tr><th>計算月</th><th>予想合計</th><th>達成率</th><th>内訳</th><th>実績</th><th>差</th><th>保存日時</th><th class="noprint"></th></tr>';
+  ks.forEach(k=>{const p=ST.preds[k],[y,m]=k.split('-').map(Number),a=actual(y,m);
+    h+=`<tr><td class="l">${y}年${m}月分</td><td><b>${yen(p.total)}</b></td><td>${p.rate!=null?pct(p.rate):'—'}</td><td class="l note">${p.items.map(x=>x[0]+' '+yen(x[1])).join('<br>')+((p.inp&&p.inp._custom||[]).filter(c=>c.n&&c.c).length?'<br>追加サービス：'+p.inp._custom.filter(c=>c.n&&c.c).map(c=>c.n.replace(/</g,'&lt;')+' '+c.c+'件').join('・'):'')+(p.bea?'<br>（ベア '+yen(p.bea)+'・毎月）':'')}${p.inp&&p.inp.cMemo?'<br>メモ：'+p.inp.cMemo.replace(/</g,'&lt;'):''}</td><td>${a!==null?yen(a):'—'}</td><td>${a!==null?sgn(p.total-a):''}</td><td class="note">${p.savedAt}</td>
+    <td class="noprint"><button class="small sub" data-o="${k}">開く</button> <button class="del" data-d="${k}">削除</button></td></tr>`});
+  $('svTable').innerHTML=h;
+  $('svTable').querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{const [y,m]=b.dataset.o.split('-');$('cYear').value=String(+y);$('cMonth').value=String(+m);loadMonth();document.querySelector('.tabs button[data-p=p1]').click()});
+  $('svTable').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{if(b.dataset.armed){delete ST.preds[b.dataset.d];saveState();renderSaved()}else{b.dataset.armed=1;b.textContent='もう一度押すと削除'}});
+}
+window.addEventListener('beforeprint',()=>{if(ME){renderSchedule();renderTedori();renderSaved();}});
+})();
+</script>
+</body>
+</html>
