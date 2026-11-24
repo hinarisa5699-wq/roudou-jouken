@@ -595,6 +595,144 @@ var e,a,n="function"==typeof Symbol?Symbol:{},t=n.iterator||"@@iterator",r=n.toS
 })();
 </script>
 
+<!-- 【追加 2026-11-24】①雇用形態に「短時間正規雇用労働者（短時間正社員）」を足す（キャリアアップ助成金の転換後の区分＝就業規則の短時間正規雇用労働者）
+     ②保管BOXから開いた通知書は、雇用形態を選び直しても保存済みの基本給・手当を計算し直さない（化け防止）
+     ③プレビュー画面に「PDFダウンロード」（印刷とは別。文字の入ったPDF＝ポータルが契約期間を読める）
+     暗号ブロック側を直したら、このscriptタグ2つは丸ごと削除してかまいません。 -->
+<script>
+(function () {
+  if (!window.Babel || !Babel.transform) return;
+  var TAG = '[roudou-fix-1124]';
+  var NT = '短時間正規雇用労働者（短時間正社員）';
+  var PAIRS = [
+    ["empTypes: ['正規雇用労働者', '短時間雇用労働者', '有期契約労働者', '短時間有期契約労働者', '有期契約労働者（短時間正規職員）', 'パート', '役員'],",
+     "empTypes: ['正規雇用労働者', '" + NT + "', '短時間雇用労働者', '有期契約労働者', '短時間有期契約労働者', '有期契約労働者（短時間正規職員）', 'パート', '役員'],"],
+    ["      empTypes: (Array.isArray(d.empTypes) && d.empTypes.length) ? d.empTypes : DEFAULT_SETTINGS.empTypes.slice(),",
+     "      empTypes: (Array.isArray(d.empTypes) && d.empTypes.length) ? (d.empTypes.includes('" + NT + "') ? d.empTypes : (() => { const a = d.empTypes.slice(); const k = a.indexOf('正規雇用労働者'); a.splice(k >= 0 ? k + 1 : 0, 0, '" + NT + "'); return a; })()) : DEFAULT_SETTINGS.empTypes.slice(),"],
+    ["computeAndApply(calcQual, calcGrade, calcRole, calcBasis, calcHours, department, v); } };",
+     "if (editingIndex == null || /パート/.test(employmentType || '')) computeAndApply(calcQual, calcGrade, calcRole, calcBasis, calcHours, department, v); } }; /* 【修正 2026-11-24】保管BOXから開いた正社員の通知書は、雇用形態を選び直しても保存済みの金額を計算し直さない */"]
+  ];
+  var orig = Babel.transform.bind(Babel);
+  Babel.transform = function (src, opts) {
+    try {
+      if (typeof src === 'string' && src.length > 1000) {
+        var applied = 0, missed = [];
+        for (var i = 0; i < PAIRS.length; i++) {
+          if (src.indexOf(PAIRS[i][0]) >= 0) { src = src.split(PAIRS[i][0]).join(PAIRS[i][1]); applied++; } else missed.push(i + 1);
+        }
+        window.__ROUDOU_PATCH_1124__ = 'applied=' + applied + '/' + PAIRS.length + (missed.length ? ' MISSED=' + missed.join(',') : ' all-ok');
+        console.log(TAG + ' ' + window.__ROUDOU_PATCH_1124__);
+      }
+    } catch (e) { console.log(TAG + ' error:' + e.message); }
+    return orig(src, opts);
+  };
+})();
+</script>
+<script>
+  /* 【追加 2026-11-24】PDFに「見えない文字」を重ねる（画像だけのPDFだとポータルが契約期間を読めないため）。
+     日本語フォント（Noto Sans JP）は押したときに1回だけ読み込む。使った文字だけ入るのでPDFは数百KB。
+     プレビュー画面の「⬇ PDFダウンロード」と、保管BOXの各行の「PDF」の両方で使う。 */
+  (function () {
+    var FONT_URL = 'https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans-jp@0.4.3/400Regular/NotoSansJP_400Regular.ttf';
+    async function jpFont() {
+      if (window.__jpFontBin) return window.__jpFontBin;
+      var r = await fetch(FONT_URL);
+      if (!r.ok) throw new Error('日本語フォントを読み込めませんでした');
+      var u = new Uint8Array(await r.arrayBuffer()), s = '', CH = 0x8000;
+      for (var i = 0; i < u.length; i += CH) s += String.fromCharCode.apply(null, u.subarray(i, i + CH));
+      return (window.__jpFontBin = s);
+    }
+    // el（画面に描いた通知書）の文字を、PDFの同じ位置に見えない文字で置く。x0,y0＝画像の左上(mm)、k＝1pxあたりのmm
+    window.__roudouTextLayer = async function (pdf, el, x0, y0, k) {
+      var f = await jpFont();
+      pdf.addFileToVFS('NotoSansJP.ttf', f); pdf.addFont('NotoSansJP.ttf', 'NotoSansJP', 'normal'); pdf.setFont('NotoSansJP');
+      var base = el.getBoundingClientRect(), w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), rg = document.createRange(), n;
+      while ((n = w.nextNode())) {
+        var t = n.nodeValue; if (!t || !t.trim()) continue;
+        var run = '', rt = null, rl = 0, rh = 0;
+        var flush = function () {
+          if (run.trim()) { pdf.setFontSize(Math.max(4, rh * k * 2.835 * 0.8)); pdf.text(run, x0 + (rl - base.left) * k, y0 + (rt - base.top) * k, { baseline: 'top', renderingMode: 'invisible' }); }
+          run = ''; rt = null;
+        };
+        for (var i = 0; i < t.length; i++) {
+          rg.setStart(n, i); rg.setEnd(n, i + 1);
+          var r = rg.getClientRects()[0]; if (!r) continue;
+          if (rt === null || Math.abs(r.top - rt) > r.height * 0.5) { flush(); rt = r.top; rl = r.left; rh = r.height; }
+          run += t[i];
+        }
+        flush();
+      }
+    };
+
+    function txt(el) { return String((el && el.textContent) || '').replace(/[\s　]+/g, ' ').trim(); }
+    function toast(m) {
+      var d = document.createElement('div'); d.textContent = m;
+      d.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#333;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:99999;box-shadow:0 4px 14px rgba(0,0,0,.25);';
+      document.body.appendChild(d); setTimeout(function () { d.remove(); }, 5000);
+    }
+    function printRules() {
+      var out = '', ss = document.querySelectorAll('style');
+      for (var i = 0; i < ss.length; i++) {
+        var s = ss[i].textContent, k = s.indexOf('@media print'); if (k < 0) continue;
+        var st = s.indexOf('{', k), d = 0, j;
+        for (j = st; j < s.length; j++) { if (s[j] === '{') d++; else if (s[j] === '}') { d--; if (d === 0) break; } }
+        s.slice(st + 1, j).replace(/([^{}]+)\{([^{}]*)\}/g, function (m, sel, body) {
+          sel = sel.trim(); if (!/\.form|\.sub-item/.test(sel) || /@page/.test(sel)) return m;
+          out += sel.split(',').map(function (x) { return '.__pdfwrap2 ' + x.trim(); }).join(',') + '{' + body + '}\n'; return m;
+        });
+      }
+      return out;
+    }
+    var busy = false;
+    async function download(btn) {
+      if (busy) return; busy = true;
+      var label = btn.textContent; btn.textContent = 'PDFを作成中…'; btn.disabled = true;
+      var wrap = null;
+      try {
+        if (!window.html2canvas || !window.jspdf) throw new Error('PDFの部品が読み込めていません');
+        var pv = document.querySelector('.form-preview'); if (!pv) throw new Error('通知書の画面が見つかりません');
+        var W = 178, H = 265, ML = 16, MT = 26;
+        wrap = document.createElement('div'); wrap.className = '__pdfwrap2';
+        wrap.style.cssText = 'position:fixed;left:-20000px;top:0;width:' + W + 'mm;background:#fff;';
+        var st = document.createElement('style');
+        st.textContent = printRules() + '.__pdfwrap2 .form-preview{width:' + W + 'mm !important;min-height:0 !important;height:auto !important;padding:0 !important;margin:0 !important;box-shadow:none !important;zoom:1 !important;}';
+        wrap.appendChild(st); var c = pv.cloneNode(true); wrap.appendChild(c); document.body.appendChild(wrap);
+        if (document.fonts && document.fonts.ready) await document.fonts.ready;
+        var canvas = await window.html2canvas(c, { scale: 2.5, backgroundColor: '#ffffff', useCORS: true, logging: false });
+        var pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+        var w = W, h = W * canvas.height / canvas.width; if (h > H) { w = w * H / h; h = H; }
+        var x = ML + (W - w) / 2;
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', x, MT, w, h);
+        var noText = false;
+        try { await window.__roudouTextLayer(pdf, c, x, MT, w / c.getBoundingClientRect().width); } catch (e) { noText = true; console.log('[roudou-pdf2] ' + e.message); }
+        var t = txt(c);
+        var nm = ((t.match(/^労働条件通知書\s*(.+?)\s*殿/) || [])[1] || '').replace(/[\s　]+/g, '');
+        var dm = t.normalize('NFKC').match(/適用日\s*(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日/);
+        var dt = dm ? dm[1] + '-' + ('0' + dm[2]).slice(-2) + '-' + ('0' + dm[3]).slice(-2) : '';
+        var fn = '労働条件通知書_' + (nm || '氏名なし') + (dt ? '_' + dt : '') + '.pdf';
+        pdf.save(fn);
+        toast('PDFをダウンロードしました：' + fn + (noText ? '（文字の読み込みに失敗したため画像のみ）' : ''));
+      } catch (e) { toast('PDFを作れませんでした：' + (e && e.message || e)); }
+      finally { if (wrap) wrap.remove(); btn.textContent = label; btn.disabled = false; busy = false; }
+    }
+    function addBtn() {
+      var bs = document.querySelectorAll('button');
+      for (var i = 0; i < bs.length; i++) {
+        var b = bs[i];
+        if (!/印刷\s*\/\s*PDFで保存/.test(txt(b))) continue;
+        var nx = b.nextSibling; if (nx && nx.classList && nx.classList.contains('__dlpdf')) continue;
+        var p = document.createElement('button'); p.className = '__dlpdf'; p.textContent = '⬇ PDFダウンロード';
+        p.title = '印刷の画面を出さずに、この通知書をPDFファイルでダウンロードします（ファイル名：労働条件通知書_氏名_適用日.pdf）';
+        p.style.cssText = 'padding:8px 20px;background:#0a7d55;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;';
+        p.addEventListener('click', function (e) { e.preventDefault(); download(this); });
+        b.parentNode.insertBefore(p, b.nextSibling);
+      }
+    }
+    function hook() { var r = document.getElementById('root'); if (r) new MutationObserver(addBtn).observe(r, { childList: true, subtree: true }); addBtn(); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hook); else hook();
+  })();
+</script>
+
 <!-- 起動処理（パスワードで復号してから実行） -->
 <script>
 (function(){
@@ -1250,6 +1388,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         var w = W, h = W * canvas.height / canvas.width;
         if (h > H) { w = w * H / h; h = H; } // 1枚に収まらないときだけ縮める（印刷と同じ考え方）
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', ML + (W - w) / 2, MT, w, h);
+        try { if (window.__roudouTextLayer) await window.__roudouTextLayer(pdf, c, ML + (W - w) / 2, MT, w / c.getBoundingClientRect().width); } catch (e) { console.log(TAG + ' 文字の重ね失敗 ' + e.message); } /* 【追加 2026-11-24】見えない文字を重ねる */
         var t = txt(c);
         var nm = (t.match(/^労働条件通知書\s*(.+?)\s*殿/) || [])[1] || '';
         nm = nm.replace(/[\s　]+/g, '');
